@@ -184,11 +184,13 @@ class KNearestNeighbor(object):
             # Use the distance matrix to find the k nearest neighbors of the ith    #
             # testing point, and use self.y_train to find the labels of these       #
             # neighbors. Store these labels in closest_y.                           #
+            #
             # Hint: Look up the function numpy.argsort.                             #
 			# 使用距离矩阵寻找第i个测试数据的k个最近邻
 			# 并且使用self.y_train来寻找这些邻居的标签
 			# 将这些标签存储在closest_y中
-			# 提示：查询numpy.argsort函数
+			#
+            # 提示：查询numpy.argsort函数
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             max_index = np.argsort(dists[i])
@@ -210,9 +212,12 @@ class KNearestNeighbor(object):
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             label_count = {}
             labels = set(closest_y)
+            # 遍历所有的标签
             for label in labels:
+                # 记录每个标签出现的次数
                 count = closest_y.count(label)
                 label_count[label] = count
+            # 选出出现次数最多的标签作为结果
             y_pred[i] = int(max(label_count, key=label_count.get))
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
