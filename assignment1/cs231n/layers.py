@@ -2,15 +2,19 @@ from builtins import range
 import numpy as np
 
 
-
 def affine_forward(x, w, b):
     """
     Computes the forward pass for an affine (fully-connected) layer.
+    对仿射层计算前向传播
 
     The input x has shape (N, d_1, ..., d_k) and contains a minibatch of N
     examples, where each example x[i] has shape (d_1, ..., d_k). We will
     reshape each input into a vector of dimension D = d_1 * ... * d_k, and
     then transform it to an output vector of dimension M.
+    输入x的形状为(N, d_1, ..., d_k)，其中N表示这个minibatch中的样本数
+    d_1, ..., d_k是样本x[i]的维度
+    我们会将每个输入都reshape成一个向量，该向量的维度为D = d_1 * ... * d_k
+    然后将这个向量进行处理，处理后的向量长度为M
 
     Inputs:
     - x: A numpy array containing input data, of shape (N, d_1, ..., d_k)
@@ -25,11 +29,27 @@ def affine_forward(x, w, b):
     ###########################################################################
     # TODO: Implement the affine forward pass. Store the result in out. You   #
     # will need to reshape the input into rows.                               #
+    # 实现仿射层的前向传播，将结果存储在out中，你需要将输入转换为行向量
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    # x是一个高维矩阵，第0个维度的大小为N，第1个维度的大小为d_1，第2个维度的大小为d_2，...
+    # 第k个维度的大小为d_k
+    # 取得第0个维度的大小
+    N = x.shape[0]
+    # 这里的reshape方式是保留了第0个维度
+    # 然后将后面所有维度的大小相乘，作为新的第1个维度的大小
+    # 即D = d_1 * ... * d_k
+    # 所以x_reshaped的形状为(N, D)
+    # 这里数据按行优先的顺序排列，但是由于想象不出高维的数据，所以这里也没办法描述
+    # 如果有一个二维矩阵：
+    # [[1, 2, 3],
+    #  [4, 5, 6]]
+    # 其展平后为：[1, 2, 3, 4, 5, 6]
+    x_reshaped = x.reshape((N, -1))
+    # w (D, M)
+    # b (M,)
+    # 依照维度相乘
+    out = np.dot(x_reshaped, w) + b
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -41,9 +61,11 @@ def affine_forward(x, w, b):
 def affine_backward(dout, cache):
     """
     Computes the backward pass for an affine layer.
+    对仿射层计算反向传播
 
     Inputs:
     - dout: Upstream derivative, of shape (N, M)
+      上流梯度，形状为(N, M)
     - cache: Tuple of:
       - x: Input data, of shape (N, d_1, ... d_k)
       - w: Weights, of shape (D, M)
@@ -58,11 +80,17 @@ def affine_backward(dout, cache):
     dx, dw, db = None, None, None
     ###########################################################################
     # TODO: Implement the affine backward pass.                               #
+    # 实现仿射层的反向传播
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    x_reshaped = x.reshape((x.shape[0], -1))
+    dx = np.dot(dout, w.T).reshape(x.shape)
+    dw = np.dot(x_reshaped.T, dout)
+    db = np.sum(dout, axis=0)
+    # x_reshaped(N, D)
+    # dx        (N, M) x (M, D) = (N, D)
+    # dw        (D, N) x (N, M) = (D, M)
+    # db        (M,)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -73,6 +101,7 @@ def affine_backward(dout, cache):
 def relu_forward(x):
     """
     Computes the forward pass for a layer of rectified linear units (ReLUs).
+    对ReLU层计算前向传播
 
     Input:
     - x: Inputs, of any shape
@@ -84,11 +113,10 @@ def relu_forward(x):
     out = None
     ###########################################################################
     # TODO: Implement the ReLU forward pass.                                  #
+    # 实现ReLU层的前向传播
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    out = np.maximum(0, x)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -100,6 +128,7 @@ def relu_forward(x):
 def relu_backward(dout, cache):
     """
     Computes the backward pass for a layer of rectified linear units (ReLUs).
+    对ReLU层计算反向传播
 
     Input:
     - dout: Upstream derivatives, of any shape
@@ -111,11 +140,10 @@ def relu_backward(dout, cache):
     dx, x = None, cache
     ###########################################################################
     # TODO: Implement the ReLU backward pass.                                 #
+    # 实现ReLU层的反向传播
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    dx = dout * (x > 0)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -755,10 +783,12 @@ def spatial_groupnorm_backward(dout, cache):
 def svm_loss(x, y):
     """
     Computes the loss and gradient using for multiclass SVM classification.
+    计算多分类SVM的损失函数和梯度
 
     Inputs:
     - x: Input data, of shape (N, C) where x[i, j] is the score for the jth
       class for the ith input.
+      形状为(N, C)，x[i, j]是第i个输入在第j类上的得分
     - y: Vector of labels, of shape (N,) where y[i] is the label for x[i] and
       0 <= y[i] < C
 
@@ -772,9 +802,13 @@ def svm_loss(x, y):
     # TODO: Copy over your solution from A1.
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    num_train = x.shape[0]
+    rightscore = x[np.arange(num_train), y]
+    scores = x - rightscore.reshape(-1, 1) + 1
+    scores[scores <= 0] = 0
+    loss = np.sum(scores) / num_train
+    dx = (scores > 0).astype(int) / num_train
+    dx[np.arange(num_train), y] -= np.sum(dx, axis=1)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -802,9 +836,12 @@ def softmax_loss(x, y):
     # TODO: Copy over your solution from A1.
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    num_train = x.shape[0]
+    x = np.exp(x - np.max(x))
+    x /= np.sum(x, axis=1, keepdims=True)
+    loss = -np.sum(np.log(x[np.arange(num_train), y])) / num_train
+    x[np.arange(num_train), y] -= 1
+    dx = x / num_train
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
