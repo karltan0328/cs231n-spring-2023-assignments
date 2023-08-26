@@ -530,26 +530,38 @@ def layernorm_backward(dout, cache):
 def dropout_forward(x, dropout_param):
     """
     Forward pass for inverted dropout.
+    反向dropout的前向传播
 
     Note that this is different from the vanilla version of dropout.
     Here, p is the probability of keeping a neuron output, as opposed to
     the probability of dropping a neuron output.
     See http://cs231n.github.io/neural-networks-2/#reg for more details.
+    请注意，这与vanilla版本的dropout不同。
+    在这里，p是保持神经元输出的概率，而不是丢弃神经元输出的概率。
+    有关更多详细信息，请参阅http://cs231n.github.io/neural-networks-2/#reg。
 
     Inputs:
     - x: Input data, of any shape
+      任意形状的输入数据
     - dropout_param: A dictionary with the following keys:
       - p: Dropout parameter. We keep each neuron output with probability p.
+        Dropout参数。我们以概率p保持每个神经元的输出。
       - mode: 'test' or 'train'. If the mode is train, then perform dropout;
         if the mode is test, then just return the input.
+        'test'或'train'。
+        如果模式是train，则执行dropout；如果模式是test，则只返回输入。
       - seed: Seed for the random number generator. Passing seed makes this
         function deterministic, which is needed for gradient checking but not
         in real networks.
+        随机数生成器的种子。
+        传递种子使该函数确定性，这对于梯度检查是必需的，但在真实网络中不是必需的。
 
     Outputs:
     - out: Array of the same shape as x.
+      与x形状相同的数组。
     - cache: tuple (dropout_param, mask). In training mode, mask is the dropout
       mask that was used to multiply the input; in test mode, mask is None.
+      dropout_param, mask的元组。
     """
     p, mode = dropout_param["p"], dropout_param["mode"]
     if "seed" in dropout_param:
@@ -562,11 +574,12 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # TODO: Implement training phase forward pass for inverted dropout.   #
         # Store the dropout mask in the mask variable.                        #
+        # 实现反向dropout的训练阶段前向传播。
+        # 将dropout掩码存储在变量mask中。
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
-
+        mask = (np.random.rand(*x.shape) < p) / p
+        out = x * mask
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -574,11 +587,10 @@ def dropout_forward(x, dropout_param):
     elif mode == "test":
         #######################################################################
         # TODO: Implement the test phase forward pass for inverted dropout.   #
+        # 实现反向dropout的测试阶段前向传播。
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
-
+        out = x
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                            END OF YOUR CODE                         #
@@ -593,10 +605,13 @@ def dropout_forward(x, dropout_param):
 def dropout_backward(dout, cache):
     """
     Backward pass for inverted dropout.
+    反向dropout的反向传播
 
     Inputs:
     - dout: Upstream derivatives, of any shape
+      上游导数，任意形状
     - cache: (dropout_param, mask) from dropout_forward.
+      来自dropout_forward的(dropout_param, mask)
     """
     dropout_param, mask = cache
     mode = dropout_param["mode"]
@@ -605,11 +620,10 @@ def dropout_backward(dout, cache):
     if mode == "train":
         #######################################################################
         # TODO: Implement training phase backward pass for inverted dropout   #
+        # 实现反向dropout的训练阶段反向传播
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
-
+        dx = dout * mask
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                          END OF YOUR CODE                           #
