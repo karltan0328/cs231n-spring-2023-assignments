@@ -181,15 +181,19 @@ def softmax_loss(x, y):
 def batchnorm_forward(x, gamma, beta, bn_param):
     """
     Forward pass for batch normalization.
+    批量归一化的前向传播
 
     During training the sample mean and (uncorrected) sample variance are
     computed from minibatch statistics and used to normalize the incoming data.
     During training we also keep an exponentially decaying running mean of the
     mean and variance of each feature, and these averages are used to normalize
     data at test-time.
+    训练期间，从minibatch统计中计算样本均值和（未校正的）样本方差，并用它们来归一化传入的数据。
+    在训练期间，我们还保持每个特征的均值和方差的指数衰减运行均值，这些平均值用于在测试时归一化数据。
 
     At each timestep we update the running averages for mean and variance using
     an exponential decay based on the momentum parameter:
+    在每个时间步长，我们使用基于动量参数的指数衰减更新均值和方差的运行平均值：
 
     running_mean = momentum * running_mean + (1 - momentum) * sample_mean
     running_var = momentum * running_var + (1 - momentum) * sample_var
@@ -200,21 +204,34 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     this implementation we have chosen to use running averages instead since
     they do not require an additional estimation step; the torch7
     implementation of batch normalization also uses running averages.
+    请注意，批量归一化论文建议不同的测试时间行为：他们使用大量训练图像计算每个特征的样本均值和方差，
+    而不是使用运行平均值。对于这个实现，我们选择使用运行平均值，因为它们不需要额外的估计步骤；
+    torch7批量归一化实现也使用运行平均值。
 
     Input:
     - x: Data of shape (N, D)
+      形状为(N, D)的数据
     - gamma: Scale parameter of shape (D,)
+      形状为(D,)的比例参数
     - beta: Shift paremeter of shape (D,)
+      形状为(D,)的移位参数
     - bn_param: Dictionary with the following keys:
       - mode: 'train' or 'test'; required
+        'train'或'test'；必需
       - eps: Constant for numeric stability
+        数值稳定性常数
       - momentum: Constant for running mean / variance.
+        运行均值/方差的常数
       - running_mean: Array of shape (D,) giving running mean of features
+        形状为(D,)的数组，给出特征的运行均值
       - running_var Array of shape (D,) giving running variance of features
+        形状为(D,)的数组，给出特征的运行方差
 
     Returns a tuple of:
     - out: of shape (N, D)
+      形状为(N, D)的输出
     - cache: A tuple of values needed in the backward pass
+      反向传播所需的值的元组
     """
     mode = bn_param["mode"]
     eps = bn_param.get("eps", 1e-5)
@@ -231,26 +248,40 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Use minibatch statistics to compute the mean and variance, use      #
         # these statistics to normalize the incoming data, and scale and      #
         # shift the normalized data using gamma and beta.                     #
+        # 实现在批归一化的训练时前向传播。使用小批量统计来计算均值和方差，
+        # 使用这些统计数据来归一化传入的数据，
+        # 并使用gamma和beta来缩放和移位归一化的数据。
         #                                                                     #
         # You should store the output in the variable out. Any intermediates  #
         # that you need for the backward pass should be stored in the cache   #
         # variable.                                                           #
+        # 你应该将输出存储在变量out中。
+        # 你需要反向传播的任何中间值都应存储在cache变量中。
         #                                                                     #
         # You should also use your computed sample mean and variance together #
         # with the momentum variable to update the running mean and running   #
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
+        # 您还应该使用计算得到的样本均值和方差以及动量变量来更新运行均值和运行方差，
+        # 并将结果存储在running_mean和running_var变量中。
         #                                                                     #
         # Note that though you should be keeping track of the running         #
         # variance, you should normalize the data based on the standard       #
         # deviation (square root of variance) instead!                        #
         # Referencing the original paper (https://arxiv.org/abs/1502.03167)   #
         # might prove to be helpful.                                          #
+        # 请注意，虽然您应该跟踪运行方差，
+        # 但您应该根据标准偏差（方差的平方根）来归一化数据！
+        # 参考原始论文（https://arxiv.org/abs/1502.03167）可能会有所帮助。
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
-
+        mean, var = np.mean(x, axis=0), np.var(x, axis=0)
+        std = np.sqrt(var + eps)
+        running_mean = momentum * running_mean + (1 - momentum) * mean
+        running_var = momentum * running_var + (1 - momentum) * var
+        x_norm = (x - mean) / std
+        out = gamma * x_norm + beta
+        cache = (gamma, beta, x, x_norm, mean, var, std, eps)
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -261,11 +292,14 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Use the running mean and variance to normalize the incoming data,   #
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
+        # 实现批量归一化的测试时前向传播。
+        # 使用运行均值和方差来归一化传入的数据，
+        # 然后使用gamma和beta来缩放和移位归一化的数据。
+        # 将结果存储在out变量中。
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
-
+        x_norm = (x - running_mean) / np.sqrt(running_var + eps)
+        out = gamma * x_norm + beta
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                          END OF YOUR CODE                           #
@@ -283,19 +317,26 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 def batchnorm_backward(dout, cache):
     """
     Backward pass for batch normalization.
+    批量归一化的反向传播
 
     For this implementation, you should write out a computation graph for
     batch normalization on paper and propagate gradients backward through
     intermediate nodes.
+    对于这个实现，你应该在纸上写出批量归一化的计算图，并通过中间节点向后传播梯度。
 
     Inputs:
     - dout: Upstream derivatives, of shape (N, D)
+      上游导数，形状为(N, D)
     - cache: Variable of intermediates from batchnorm_forward.
+      来自batchnorm_forward的中间变量
 
     Returns a tuple of:
     - dx: Gradient with respect to inputs x, of shape (N, D)
+      对于每个输入x的梯度，形状为(N, D)
     - dgamma: Gradient with respect to scale parameter gamma, of shape (D,)
+      对于比例参数gamma的梯度，形状为(D,)
     - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
+      对于移位参数beta的梯度，形状为(D,)
     """
     dx, dgamma, dbeta = None, None, None
     ###########################################################################
@@ -303,11 +344,19 @@ def batchnorm_backward(dout, cache):
     # results in the dx, dgamma, and dbeta variables.                         #
     # Referencing the original paper (https://arxiv.org/abs/1502.03167)       #
     # might prove to be helpful.                                              #
+    # 实现批量归一化的反向传播。将结果存储在dx，dgamma和dbeta变量中。
+    # 参考原始论文（https://arxiv.org/abs/1502.03167）可能会有所帮助。
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    gamma, beta, x, x_norm, mean, var, std, eps = cache
+    dgamma = np.sum(dout * x_norm, axis=0)
+    dbeta = np.sum(dout, axis=0)
+    # Sumk是对第0个维度求和
+    Sumk = lambda x: np.sum(x, axis=0)
+    dx_norm = dout * gamma
+    dvar = Sumk(dx_norm * (x - mean) * (-0.5) * (var + eps) ** (-1.5))
+    dmean = Sumk(dx_norm * (-1) / std) + dvar * Sumk(-2 * (x - mean)) / x.shape[0]
+    dx = dx_norm / std + dvar * 2 * (x - mean) / x.shape[0] + dmean / x.shape[0]
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -319,14 +368,19 @@ def batchnorm_backward(dout, cache):
 def batchnorm_backward_alt(dout, cache):
     """
     Alternative backward pass for batch normalization.
+    批量归一化的替代反向传播
 
     For this implementation you should work out the derivatives for the batch
     normalizaton backward pass on paper and simplify as much as possible. You
     should be able to derive a simple expression for the backward pass.
     See the jupyter notebook for more hints.
+    对于这个实现，你应该在纸上计算批量归一化反向传播的导数，并尽可能简化。
+    你应该能够推导出一个简单的表达式来进行反向传播。
+    请参阅jupyter笔记本获取更多提示。
 
     Note: This implementation should expect to receive the same cache variable
     as batchnorm_backward, but might not use all of the values in the cache.
+    注意：这个实现应该期望接收与batchnorm_backward相同的cache变量，
 
     Inputs / outputs: Same as batchnorm_backward
     """
@@ -334,15 +388,21 @@ def batchnorm_backward_alt(dout, cache):
     ###########################################################################
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
+    # 实现批量归一化的反向传播。将结果存储在dx，dgamma和dbeta变量中。
     #                                                                         #
     # After computing the gradient with respect to the centered inputs, you   #
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
+    # 在计算了关于中心化输入的梯度之后，您应该能够在一个语句中计算关于输入的梯度；
+    # 我们的实现适合一行80个字符。
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    gamma, beta, x, x_norm, mean, var, std, eps = cache
+    dgamma = np.sum(dout * x_norm, axis=0)
+    dbeta = np.sum(dout, axis=0)
 
-    pass
-
+    dx_norm = dout * gamma / (len(dout) * std)
+    dx = len(dout) * dx_norm - np.sum(dx_norm * x_norm, axis=0) * x_norm - np.sum(dx_norm, axis=0)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -354,20 +414,29 @@ def batchnorm_backward_alt(dout, cache):
 def layernorm_forward(x, gamma, beta, ln_param):
     """
     Forward pass for layer normalization.
+    层归一化的前向传播
 
     During both training and test-time, the incoming data is normalized per data-point,
     before being scaled by gamma and beta parameters identical to that of batch normalization.
+    在训练和测试时，传入的数据是每个数据点归一化的，
+    然后由与批量归一化相同的gamma和beta参数缩放。
 
     Note that in contrast to batch normalization, the behavior during train and test-time for
     layer normalization are identical, and we do not need to keep track of running averages
     of any sort.
+    请注意，与批量归一化相比，层归一化在训练和测试时的行为是相同的，
+    我们不需要跟踪任何类型的运行平均值。
 
     Input:
     - x: Data of shape (N, D)
+      形状为(N, D)的数据
     - gamma: Scale parameter of shape (D,)
+      形状为(D,)的比例参数
     - beta: Shift paremeter of shape (D,)
+      形状为(D,)的移位参数
     - ln_param: Dictionary with the following keys:
         - eps: Constant for numeric stability
+          数值稳定性常数
 
     Returns a tuple of:
     - out: of shape (N, D)
@@ -378,17 +447,26 @@ def layernorm_forward(x, gamma, beta, ln_param):
     ###########################################################################
     # TODO: Implement the training-time forward pass for layer norm.          #
     # Normalize the incoming data, and scale and  shift the normalized data   #
-    #  using gamma and beta.                                                  #
+    # using gamma and beta.                                                   #
+    # 实现层归一化的训练时前向传播。
+    # 归一化传入的数据，然后使用gamma和beta缩放和移位归一化的数据。
+    #                                                                         #
     # HINT: this can be done by slightly modifying your training-time         #
     # implementation of  batch normalization, and inserting a line or two of  #
     # well-placed code. In particular, can you think of any matrix            #
     # transformations you could perform, that would enable you to copy over   #
     # the batch norm code and leave it almost unchanged?                      #
+    # 提示：这可以通过稍微修改批量归一化的训练时实现，并插入一行或两行放置良好的代码来完成。
+    # 特别是，你能想到任何矩阵变换，可以让你复制批量归一化代码并几乎不改变它吗？
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    x = x.T
+    mean, var = np.mean(x, axis=0), np.var(x, axis=0)
+    std = np.sqrt(var + eps)
+    x_norm = (x - mean) / std
+    x_norm = x_norm.T
+    out = gamma * x_norm + beta
+    cache = (gamma, beta, x, x_norm, mean, var, std, eps)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -399,31 +477,49 @@ def layernorm_forward(x, gamma, beta, ln_param):
 def layernorm_backward(dout, cache):
     """
     Backward pass for layer normalization.
+    层归一化的反向传播
 
     For this implementation, you can heavily rely on the work you've done already
     for batch normalization.
+    对于这个实现，你可以大量依赖你已经完成的批量归一化的工作。
 
     Inputs:
     - dout: Upstream derivatives, of shape (N, D)
+      上游导数，形状为(N, D)
     - cache: Variable of intermediates from layernorm_forward.
+      来自layernorm_forward的中间变量
 
     Returns a tuple of:
     - dx: Gradient with respect to inputs x, of shape (N, D)
+      对于每个输入x的梯度，形状为(N, D)
     - dgamma: Gradient with respect to scale parameter gamma, of shape (D,)
+      对于比例参数gamma的梯度，形状为(D,)
     - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
+      对于移位参数beta的梯度，形状为(D,)
     """
     dx, dgamma, dbeta = None, None, None
     ###########################################################################
     # TODO: Implement the backward pass for layer norm.                       #
+    # 实现层归一化的反向传播。
     #                                                                         #
     # HINT: this can be done by slightly modifying your training-time         #
     # implementation of batch normalization. The hints to the forward pass    #
     # still apply!                                                            #
+    # 提示：这可以通过稍微修改批量归一化的训练时实现来完成。
+    # 前向传播的提示仍然适用！
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    gamma, beta, x, x_norm, mean, var, std, eps = cache
+    dgamma = np.sum(dout * x_norm, axis=0)
+    dbeta = np.sum(dout, axis=0)
+    Sumk = lambda x: np.sum(x, axis=0)
+    dx_norm = dout * gamma
+    dout = dout.T
+    dx_norm = dx_norm.T
+    dvar = Sumk(dx_norm * (x - mean) * (-0.5) * (var + eps) ** (-1.5))
+    dmean = Sumk(dx_norm * (-1) / std) + dvar * Sumk(-2 * (x - mean)) / x.shape[0]
+    dx = dx_norm / std + dvar * 2 * (x - mean) / x.shape[0] + dmean / x.shape[0]
+    dx = dx.T
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
