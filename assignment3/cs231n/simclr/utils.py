@@ -7,41 +7,57 @@ from tqdm import tqdm
 from .contrastive_loss import *
 
 def train(model, data_loader, train_optimizer, epoch, epochs, batch_size=32, temperature=0.5, device='cuda'):
-    """Trains the model defined in ./model.py with one epoch.
-    
+    """
+    Trains the model defined in ./model.py with one epoch.
+    训练./model.py中定义的模型一个epoch。
+
     Inputs:
     - model: Model class object as defined in ./model.py.
+      ./model.py中定义的模型类对象。
     - data_loader: torch.utils.data.DataLoader object; loads in training data. You can assume the loaded data has been augmented.
+      torch.utils.data.DataLoader对象；加载训练数据。您可以假设已加载数据已进行了增强。
     - train_optimizer: torch.optim.Optimizer object; applies an optimizer to training.
+      torch.optim.Optimizer对象；将优化器应用于训练。
     - epoch: integer; current epoch number.
+      整数；当前时代数。
     - epochs: integer; total number of epochs.
+      整数；总时代数。
     - batch_size: Number of training samples per batch.
+      每批训练样本数。
     - temperature: float; temperature (tau) parameter used in simclr_loss_vectorized.
+      simclr_loss_vectorized中使用的温度（tau）参数。
     - device: the device name to define torch tensors.
+      定义torch张量的设备名称。
 
     Returns:
     - The average loss.
+      平均损失。
     """
     model.train()
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader)
     for data_pair in train_bar:
         x_i, x_j, target = data_pair
         x_i, x_j = x_i.to(device), x_j.to(device)
-        
+
         out_left, out_right, loss = None, None, None
         ##############################################################################
         # TODO: Start of your code.                                                  #
+        # 从此处开始编写代码。
         #                                                                            #
         # Take a look at the model.py file to understand the model's input and output.
         # Run x_i and x_j through the model to get out_left, out_right.              #
         # Then compute the loss using simclr_loss_vectorized.                        #
+        # 查看model.py文件以了解模型的输入和输出。
+        # 运行x_i和x_j通过模型以获得out_left，out_right。
+        # 然后使用simclr_loss_vectorized计算损失。
         ##############################################################################
-        
-        
+        _, out_left = model(x_i)
+        _, out_right = model(x_j)
+        loss = simclr_loss_vectorized(out_left, out_right, temperature, device)
         ##############################################################################
         #                               END OF YOUR CODE                             #
         ##############################################################################
-        
+
         train_optimizer.zero_grad()
         loss.backward()
         train_optimizer.step()
@@ -104,7 +120,7 @@ def test(model, memory_data_loader, test_data_loader, epoch, epochs, c, temperat
             total_num += data.size(0)
             # compute cos similarity between each feature vector and feature bank ---> [B, N]
             sim_matrix = torch.mm(feature, feature_bank)
-            
+
             # [B, K]
             sim_weight, sim_indices = sim_matrix.topk(k=k, dim=-1)
             # [B, K]
