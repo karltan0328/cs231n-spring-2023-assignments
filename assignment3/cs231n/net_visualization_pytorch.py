@@ -8,11 +8,15 @@ from scipy.ndimage.filters import gaussian_filter1d
 def compute_saliency_maps(X, y, model):
     """
     Compute a class saliency map using the model for images X and labels y.
+    计算使用模型的类显著性图，用于图像X和标签y。
 
     Input:
     - X: Input images; Tensor of shape (N, 3, H, W)
+      输入图像；形状张量(N, 3, H, W)
     - y: Labels for X; LongTensor of shape (N,)
+      X的标签；形状张量(N,)
     - model: A pretrained CNN that will be used to compute the saliency map.
+      将用于计算显著性图的预训练CNN。
 
     Returns:
     - saliency: A Tensor of shape (N, H, W) giving the saliency maps for the input
@@ -31,11 +35,13 @@ def compute_saliency_maps(X, y, model):
     # to each input image. You first want to compute the loss over the correct   #
     # scores (we'll combine losses across a batch by summing), and then compute  #
     # the gradients with a backward pass.                                        #
+    # 实现这个函数。通过模型进行前向和后向传递，计算正确类分数相对于每个输入图像的梯度。
+    # 首先要计算正确分数的损失（我们将通过求和来组合批次中的损失），然后进行反向传递计算梯度。
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    y_pred = model(X).gather(1, y.view(-1, 1)).squeeze()
+    y_pred.backward(torch.ones(y_pred.shape[0]))
+    saliency, _ = torch.max(X.grad.abs(), 1)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
     #                             END OF YOUR CODE                               #
@@ -46,11 +52,15 @@ def make_fooling_image(X, target_y, model):
     """
     Generate a fooling image that is close to X, but that the model classifies
     as target_y.
+    生成一个接近X的愚弄图像，但模型将其分类为target_y。
 
     Inputs:
     - X: Input image; Tensor of shape (1, 3, 224, 224)
+      输入图像：形状张量(1, 3, 224, 224)
     - target_y: An integer in the range [0, 1000)
+      一个范围在[0, 1000)的整数
     - model: A pretrained CNN
+      一个预训练的CNN
 
     Returns:
     - X_fooling: An image that is close to X, but that is classifed as target_y
@@ -67,17 +77,29 @@ def make_fooling_image(X, target_y, model):
     # target class, stopping when the model is fooled.                           #
     # When computing an update step, first normalize the gradient:               #
     #   dX = learning_rate * g / ||g||_2                                         #
+    # 生成一个愚弄图像X_fooling，模型将其分类为target_y类。
+    # 您应该对目标类的分数执行梯度上升，当模型被愚弄时停止。
+    # 计算更新步骤时，首先归一化梯度：
+    #   dX = learning_rate * g / ||g||_2
     #                                                                            #
     # You should write a training loop.                                          #
+    # 您应该编写一个训练循环。
     #                                                                            #
     # HINT: For most examples, you should be able to generate a fooling image    #
     # in fewer than 100 iterations of gradient ascent.                           #
     # You can print your progress over iterations to check your algorithm.       #
+    # 大多数情况下，您应该能够在梯度上升的100次迭代中生成愚弄图像。
+    # 您可以打印迭代过程中的进度以检查算法。
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    while(True):
+        outputs = model(X_fooling)
+        y_pred = outputs[:, target_y]
+        if outputs.argmax() == target_y:
+            break
+        y_pred.backward()
+        X_fooling.data += learning_rate * X_fooling.grad / X_fooling.grad.norm()
+        X_fooling.grad.data.zero_()
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
     #                             END OF YOUR CODE                               #
@@ -91,11 +113,17 @@ def class_visualization_update_step(img, model, target_y, l2_reg, learning_rate)
     # gradient step on the image using the learning rate. Don't forget the #
     # L2 regularization term!                                              #
     # Be very careful about the signs of elements in your code.            #
+    # 使用模型计算图像像素的类target_y的分数的梯度，并使用学习率对图像进行梯度步骤。
+    # 不要忘记L2正则化项！
+    # 在代码中非常小心元素的符号。
     ########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    outputs = model(img)
+    y_pred = outputs[:, target_y]
+    loss = y_pred - l2_reg * img.norm() ** 2
+    loss.backward()
+    img.data += learning_rate * img.grad / img.grad.norm()
+    img.grad.data.zero_()
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ########################################################################
     #                             END OF YOUR CODE                         #
