@@ -15,9 +15,12 @@ def im2col_cython(np.ndarray[DTYPE_t, ndim=4] x, int field_height,
     cdef int C = x.shape[1]
     cdef int H = x.shape[2]
     cdef int W = x.shape[3]
-    
-    cdef int HH = (H + 2 * padding - field_height) / stride + 1
-    cdef int WW = (W + 2 * padding - field_width) / stride + 1
+
+    # 修改
+    # cdef int HH = (H + 2 * padding - field_height) / stride + 1
+    # cdef int WW = (W + 2 * padding - field_width) / stride + 1
+    cdef int HH = int((H + 2 * padding - field_height) / stride) + 1
+    cdef int WW = int((W + 2 * padding - field_width) / stride) + 1
 
     cdef int p = padding
     cdef np.ndarray[DTYPE_t, ndim=4] x_padded = np.pad(x,
@@ -57,14 +60,17 @@ cdef int im2col_cython_inner(np.ndarray[DTYPE_t, ndim=2] cols,
 def col2im_cython(np.ndarray[DTYPE_t, ndim=2] cols, int N, int C, int H, int W,
                   int field_height, int field_width, int padding, int stride):
     cdef np.ndarray x = np.empty((N, C, H, W), dtype=cols.dtype)
-    cdef int HH = (H + 2 * padding - field_height) / stride + 1
-    cdef int WW = (W + 2 * padding - field_width) / stride + 1
+    # 修改
+    # cdef int HH = (H + 2 * padding - field_height) / stride + 1
+    # cdef int WW = (W + 2 * padding - field_width) / stride + 1
+    cdef int HH = int((H + 2 * padding - field_height) / stride) + 1
+    cdef int WW = int((W + 2 * padding - field_width) / stride) + 1
     cdef np.ndarray[DTYPE_t, ndim=4] x_padded = np.zeros((N, C, H + 2 * padding, W + 2 * padding),
                                         dtype=cols.dtype)
 
     # Moving the inner loop to a C-function with no bounds checking improves
     # performance quite a bit for col2im.
-    col2im_cython_inner(cols, x_padded, N, C, H, W, HH, WW, 
+    col2im_cython_inner(cols, x_padded, N, C, H, W, HH, WW,
                         field_height, field_width, padding, stride)
     if padding > 0:
         return x_padded[:, :, padding:-padding, padding:-padding]
@@ -104,13 +110,16 @@ cdef col2im_6d_cython_inner(np.ndarray[DTYPE_t, ndim=6] cols,
                     for h in range(out_h):
                         for w in range(out_w):
                             x_padded[n, c, stride * h + hh, stride * w + ww] += cols[c, hh, ww, n, h, w]
-    
+
 
 def col2im_6d_cython(np.ndarray[DTYPE_t, ndim=6] cols, int N, int C, int H, int W,
         int HH, int WW, int pad, int stride):
     cdef np.ndarray x = np.empty((N, C, H, W), dtype=cols.dtype)
-    cdef int out_h = (H + 2 * pad - HH) / stride + 1
-    cdef int out_w = (W + 2 * pad - WW) / stride + 1
+    # 修改
+    # cdef int out_h = (H + 2 * pad - HH) / stride + 1
+    # cdef int out_w = (W + 2 * pad - WW) / stride + 1
+    cdef int out_h = int((H + 2 * pad - HH) / stride) + 1
+    cdef int out_w = int((W + 2 * pad - WW) / stride) + 1
     cdef np.ndarray[DTYPE_t, ndim=4] x_padded = np.zeros((N, C, H + 2 * pad, W + 2 * pad),
                                                   dtype=cols.dtype)
 
@@ -118,4 +127,4 @@ def col2im_6d_cython(np.ndarray[DTYPE_t, ndim=6] cols, int N, int C, int H, int 
 
     if pad > 0:
         return x_padded[:, :, pad:-pad, pad:-pad]
-    return x_padded 
+    return x_padded

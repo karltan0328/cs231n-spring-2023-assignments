@@ -636,26 +636,37 @@ def dropout_backward(dout, cache):
 def conv_forward_naive(x, w, b, conv_param):
     """
     A naive implementation of the forward pass for a convolutional layer.
+    卷积层的前向传播的naive实现。
 
     The input consists of N data points, each with C channels, height H and
     width W. We convolve each input with F different filters, where each filter
     spans all C channels and has height HH and width WW.
+    输入由N个数据点组成，每个数据点具有C个通道，高度H和宽度W。
+    我们用F个不同的滤波器对每个输入进行卷积，其中每个滤波器跨越所有C个通道，高度HH和宽度WW。
 
     Input:
     - x: Input data of shape (N, C, H, W)
+      形状为(N, C, H, W)的输入数据
     - w: Filter weights of shape (F, C, HH, WW)
+      形状为(F, C, HH, WW)的滤波器权重
     - b: Biases, of shape (F,)
+      偏置，形状为(F,)
     - conv_param: A dictionary with the following keys:
       - 'stride': The number of pixels between adjacent receptive fields in the
         horizontal and vertical directions.
+        水平和垂直方向上相邻感受野之间的像素数。
       - 'pad': The number of pixels that will be used to zero-pad the input.
+        在输入上用于零填充的像素数。
 
     During padding, 'pad' zeros should be placed symmetrically (i.e equally on both sides)
     along the height and width axes of the input. Be careful not to modfiy the original
     input x directly.
+    在填充期间，应该对输入的高度和宽度轴对称地（即两侧相等地）放置“pad”个零。
+    注意不要直接修改原始输入x。
 
     Returns a tuple of:
     - out: Output data, of shape (N, F, H', W') where H' and W' are given by
+      输出数据，形状为(N, F, H', W')，其中H'和W'由以下公式给出
       H' = 1 + (H + 2 * pad - HH) / stride
       W' = 1 + (W + 2 * pad - WW) / stride
     - cache: (x, w, b, conv_param)
@@ -664,11 +675,28 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
+    # 实现卷积前向传播。
+    # 提示：您可以使用np.pad函数进行填充。
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+    stride = conv_param.get('stride', 1)
+    pad = conv_param.get('pad', 0)
+    H_ = 1 + int((H + 2 * pad - HH) / stride)
+    W_ = 1 + int((W + 2 * pad - WW) / stride)
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    out = np.zeros((N, F, H_, W_))
+    w_row = w.reshape(F, -1)
+    x_col = np.zeros((C * HH * WW, H_ * W_))
+    for f in range(N):
+        temp = 0
+        for h_ in range(0, (H_ - 1) * stride + 1, stride):
+            for w_ in range(0, (H_ - 1) * stride + 1, stride):
+                x_col[:, temp] = x_pad[f, :, h_:h_ + HH, w_:w_ + WW].reshape(-1)
+                temp += 1
+        out[f] = (np.dot(w_row, x_col) + b.reshape(-1, 1)).reshape(F, H_, W_)
+    x = x_pad
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -680,10 +708,13 @@ def conv_forward_naive(x, w, b, conv_param):
 def conv_backward_naive(dout, cache):
     """
     A naive implementation of the backward pass for a convolutional layer.
+    卷积层的反向传播的naive实现。
 
     Inputs:
     - dout: Upstream derivatives.
+      上游导数。
     - cache: A tuple of (x, w, b, conv_param) as in conv_forward_naive
+      与conv_forward_naive中的(x, w, b, conv_param)元组相同
 
     Returns a tuple of:
     - dx: Gradient with respect to x
@@ -693,11 +724,30 @@ def conv_backward_naive(dout, cache):
     dx, dw, db = None, None, None
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
+    # 实现卷积反向传播。
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    x, w, b, conv_param = cache
+    stride = conv_param.get('stride', 1)
+    pad = conv_param.get('pad', 0)
+    N, C, H_, W_ = dout.shape
+    F, C, HH, WW = w.shape
+    dx, dw, db = np.zeros_like(x), np.zeros_like(w), np.zeros_like(b)
 
-    pass
-
+    w_row = w.reshape(F, -1)
+    x_col = np.zeros((C * HH * WW, H_ * W_))
+    for f in range(N):
+        d_out = dout[f].reshape(F, -1)
+        db += np.sum(d_out, axis=1)
+        dz = np.dot(w_row.T, d_out)
+        temp = 0
+        for h_ in range(0, (H_ - 1) * stride + 1, stride):
+            for w_ in range(0, (H_ - 1) * stride + 1, stride):
+                x_col[:, temp] = x[f, :, h_:h_ + HH, w_:w_ + WW].reshape(-1)
+                dx[f, :, h_:h_ + HH, w_:w_ + WW] += dz[:, temp].reshape(C, HH, WW)
+                temp += 1
+        dw += np.dot(d_out, x_col.T).reshape(F, C, HH, WW)
+    dx = dx[:, :, pad:-pad, pad:-pad]
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -708,13 +758,18 @@ def conv_backward_naive(dout, cache):
 def max_pool_forward_naive(x, pool_param):
     """
     A naive implementation of the forward pass for a max-pooling layer.
+    最大池化层的前向传播的naive实现。
 
     Inputs:
     - x: Input data, of shape (N, C, H, W)
+      输入数据，形状为(N, C, H, W)
     - pool_param: dictionary with the following keys:
       - 'pool_height': The height of each pooling region
+        池化区域的高度
       - 'pool_width': The width of each pooling region
+        池化区域的宽度
       - 'stride': The distance between adjacent pooling regions
+        相邻池化区域之间的距离
 
     No padding is necessary here, eg you can assume:
       - (H - pool_height) % stride == 0
@@ -729,11 +784,19 @@ def max_pool_forward_naive(x, pool_param):
     out = None
     ###########################################################################
     # TODO: Implement the max-pooling forward pass                            #
+    # 实现最大池化的前向传播
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    N, C, H, W = x.shape
+    pool_height = pool_param.get('pool_height', 2)
+    pool_width = pool_param.get('pool_width', 2)
+    stride = pool_param.get('stride', 2)
+    H_ = 1 + int((H - pool_height) / stride)
+    W_ = 1 + int((W - pool_width) / stride)
+    out = np.zeros((N, C, H_, W_))
+    for h in range(H_):
+        for w in range(W_):
+            out[:, :, h, w] = np.max(x[:, :, h * stride:h * stride + pool_height, w * stride:w * stride + pool_width], axis=(2, 3))
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -745,10 +808,13 @@ def max_pool_forward_naive(x, pool_param):
 def max_pool_backward_naive(dout, cache):
     """
     A naive implementation of the backward pass for a max-pooling layer.
+    最大池化层的反向传播的naive实现。
 
     Inputs:
     - dout: Upstream derivatives
+      上游导数
     - cache: A tuple of (x, pool_param) as in the forward pass.
+      与前向传播中的(x, pool_param)元组相同。
 
     Returns:
     - dx: Gradient with respect to x
@@ -756,11 +822,25 @@ def max_pool_backward_naive(dout, cache):
     dx = None
     ###########################################################################
     # TODO: Implement the max-pooling backward pass                           #
+    # 实现最大池化的反向传播
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    x, pool_param = cache
+    N, C, H_, W_ = dout.shape
+    pool_height = pool_param.get('pool_height', 2)
+    pool_width = pool_param.get('pool_width', 2)
+    stride = pool_param.get('stride', 2)
 
-    pass
-
+    dx = np.zeros_like(x)
+    for h in range(H_):
+        for w in range(W_):
+            x_catch = x[:, :, h * stride:h * stride + pool_height, w * stride:w * stride + pool_width]
+            x_max = np.max(x_catch, axis=(2, 3))
+            x_catch -= np.tile(x_max[:, :, np.newaxis, np.newaxis], (1, 1, pool_height, pool_width))
+            x_catch[x_catch == 0] = 1
+            x_catch[x_catch < 0] = 0
+            x_catch *= np.tile(dout[:, :, h, w][:, :, np.newaxis, np.newaxis], (1, 1, pool_height, pool_width))
+            dx[:, :, h * stride:h * stride + pool_height, w * stride:w * stride + pool_width] = x_catch
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -771,20 +851,31 @@ def max_pool_backward_naive(dout, cache):
 def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     """
     Computes the forward pass for spatial batch normalization.
+    计算空间批量归一化的前向传播。
 
     Inputs:
     - x: Input data of shape (N, C, H, W)
+      形状为(N, C, H, W)的输入数据
     - gamma: Scale parameter, of shape (C,)
+      比例参数，形状为(C,)
     - beta: Shift parameter, of shape (C,)
+      移位参数，形状为(C,)
     - bn_param: Dictionary with the following keys:
       - mode: 'train' or 'test'; required
+        'train'或'test'；必需
       - eps: Constant for numeric stability
+        数值稳定性常数
       - momentum: Constant for running mean / variance. momentum=0 means that
         old information is discarded completely at every time step, while
         momentum=1 means that new information is never incorporated. The
         default of momentum=0.9 should work well in most situations.
+        运行均值/方差的常数。momentum=0意味着旧信息在每个时间步骤完全被丢弃，
+        而momentum=1意味着新信息永远不会被合并。
+        默认的momentum=0.9在大多数情况下都很好。
       - running_mean: Array of shape (D,) giving running mean of features
+        形状为(D,)的数组，给出特征的运行均值
       - running_var Array of shape (D,) giving running variance of features
+        形状为(D,)的数组，给出特征的运行方差
 
     Returns a tuple of:
     - out: Output data, of shape (N, C, H, W)
@@ -794,15 +885,19 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
 
     ###########################################################################
     # TODO: Implement the forward pass for spatial batch normalization.       #
+    # 实现空间批量归一化的前向传播。
     #                                                                         #
     # HINT: You can implement spatial batch normalization by calling the      #
     # vanilla version of batch normalization you implemented above.           #
     # Your implementation should be very short; ours is less than five lines. #
+    # 您可以通过调用上面实现的批量归一化的vanilla版本来实现空间批量归一化。
+    # 您的实现应该非常简短；我们的代码不到五行。
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    N, C, H, W = x.shape
+    x = x.transpose(0, 2, 3, 1).reshape(N * H * W, C)
+    out, cache = batchnorm_forward(x, gamma, beta, bn_param)
+    out = out.reshape(N, H, W, C).transpose(0, 3, 1, 2)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -814,10 +909,13 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
 def spatial_batchnorm_backward(dout, cache):
     """
     Computes the backward pass for spatial batch normalization.
+    计算空间批量归一化的反向传播。
 
     Inputs:
     - dout: Upstream derivatives, of shape (N, C, H, W)
+      上游导数，形状为(N, C, H, W)
     - cache: Values from the forward pass
+      来自前向传播的值
 
     Returns a tuple of:
     - dx: Gradient with respect to inputs, of shape (N, C, H, W)
@@ -828,15 +926,19 @@ def spatial_batchnorm_backward(dout, cache):
 
     ###########################################################################
     # TODO: Implement the backward pass for spatial batch normalization.      #
+    # 实现空间批量归一化的反向传播。
     #                                                                         #
     # HINT: You can implement spatial batch normalization by calling the      #
     # vanilla version of batch normalization you implemented above.           #
     # Your implementation should be very short; ours is less than five lines. #
+    # 您可以通过调用上面实现的批量归一化的vanilla版本来实现空间批量归一化。
+    # 您的实现应该非常简短；我们的代码不到五行。
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    N, C, H, W = dout.shape
+    dout = dout.transpose(0, 2, 3, 1).reshape(N * H * W, C)
+    dx, dgamma, dbeta = batchnorm_backward(dout, cache)
+    dx = dx.reshape(N, H, W, C).transpose(0, 3, 1, 2)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -848,19 +950,27 @@ def spatial_batchnorm_backward(dout, cache):
 def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     """
     Computes the forward pass for spatial group normalization.
+    计算空间组归一化的前向传播。
 
     In contrast to layer normalization, group normalization splits each entry in the data into G
     contiguous pieces, which it then normalizes independently. Per-feature shifting and scaling
     are then applied to the data, in a manner identical to that of batch normalization and layer
     normalization.
+    与层归一化相反，组归一化将数据中的每个条目分成G个连续的片段，然后独立地对其进行归一化。
+    然后以与批量归一化和层归一化完全相同的方式对数据进行移位和缩放。
 
     Inputs:
     - x: Input data of shape (N, C, H, W)
+      形状为(N, C, H, W)的输入数据
     - gamma: Scale parameter, of shape (1, C, 1, 1)
+      比例参数，形状为(1, C, 1, 1)
     - beta: Shift parameter, of shape (1, C, 1, 1)
+      移位参数，形状为(1, C, 1, 1)
     - G: Integer mumber of groups to split into, should be a divisor of C
+      要分割的组数的整数，应该是C的除数
     - gn_param: Dictionary with the following keys:
       - eps: Constant for numeric stability
+        数值稳定性常数
 
     Returns a tuple of:
     - out: Output data, of shape (N, C, H, W)
@@ -874,11 +984,19 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     # In particular, think about how you could transform the matrix so that   #
     # the bulk of the code is similar to both train-time batch normalization  #
     # and layer normalization!                                                #
+    # 实现空间组归一化的前向传播。
+    # 这与层归一化实现非常相似。
+    # 特别是，想想如何转换矩阵，使得大部分代码与训练时批量归一化和层归一化都相似！
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    N, C, H, W = x.shape
+    x = x.reshape(N * G, -1).T
+    mean, var = np.mean(x, axis=0), np.var(x, axis=0)
+    std = np.sqrt(var + eps)
+    x_norm = (x - mean) / std
+    x_norm = x_norm.T.reshape(N, C, H, W)
+    out = gamma * x_norm + beta
+    cache = (gamma, beta, x, x_norm, mean, var, std, eps, G)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -889,10 +1007,13 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
 def spatial_groupnorm_backward(dout, cache):
     """
     Computes the backward pass for spatial group normalization.
+    计算空间组归一化的反向传播。
 
     Inputs:
     - dout: Upstream derivatives, of shape (N, C, H, W)
+      上游导数，形状为(N, C, H, W)
     - cache: Values from the forward pass
+      来自前向传播的值
 
     Returns a tuple of:
     - dx: Gradient with respect to inputs, of shape (N, C, H, W)
@@ -904,11 +1025,23 @@ def spatial_groupnorm_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the backward pass for spatial group normalization.      #
     # This will be extremely similar to the layer norm implementation.        #
+    # 实现空间组归一化的反向传播。
+    # 这与层归一化实现非常相似。
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    N, C, H, W = dout.shape
+    gamma, beta, x, x_norm, mean, var, std, eps, G = cache
+    dgamma = np.sum(dout * x_norm, axis=(0, 2, 3)).reshape((1, C, 1, 1))
+    dbeta = np.sum(dout, axis=(0, 2, 3)).reshape((1, C, 1, 1))
+    Sumk = lambda x: np.sum(x, axis=0)
 
-    pass
-
+    dx_norm = dout * gamma
+    dout = dout.T
+    dx_norm = dx_norm.reshape(N * G, -1).T
+    dvar = Sumk(dx_norm * (x - mean) * (-0.5) * (var + eps) ** (-1.5))
+    dmean = Sumk(dx_norm * (-1) / std) + dvar * Sumk(-2 * (x - mean)) / x.shape[0]
+    dx = dx_norm / std + dvar * 2 * (x - mean) / x.shape[0] + dmean / x.shape[0]
+    dx = dx.T.reshape(N, C, H, W)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
