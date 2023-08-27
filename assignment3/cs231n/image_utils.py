@@ -62,7 +62,8 @@ def image_from_url(url):
         with open(fname, "wb") as ff:
             ff.write(f.read())
         img = imread(fname)
-        os.remove(fname)
+        # 这里需要注释掉，不然会报错
+        # os.remove(fname)
         return img
     except urllib.error.URLError as e:
         print("URL Error: ", e.reason, url)
