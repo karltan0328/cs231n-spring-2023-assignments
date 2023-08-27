@@ -11,24 +11,34 @@ class CaptioningTransformer(nn.Module):
     """
     A CaptioningTransformer produces captions from image features using a
     Transformer decoder.
+    使用Transformer解码器从图像特征中生成标题的一个CaptioningTransformer。
 
     The Transformer receives input vectors of size D, has a vocab size of V,
     works on sequences of length T, uses word vectors of dimension W, and
     operates on minibatches of size N.
+    Transformer接收大小为D的输入向量，具有大小为V的词汇表，适用于长度为T的序列，
+    使用维度为W的单词向量，并且在大小为N的小批量上运行。
     """
     def __init__(self, word_to_idx, input_dim, wordvec_dim, num_heads=4,
                  num_layers=2, max_length=50):
         """
         Construct a new CaptioningTransformer instance.
+        构造一个新的CaptioningTransformer实例。
 
         Inputs:
         - word_to_idx: A dictionary giving the vocabulary. It contains V entries.
           and maps each string to a unique integer in the range [0, V).
+          一个给出词汇表的字典。它包含V个条目。并将每个字符串映射到范围[0，V）内的唯一整数。
         - input_dim: Dimension D of input image feature vectors.
+          输入图像特征向量的维度D。
         - wordvec_dim: Dimension W of word vectors.
+          单词向量的维度W。
         - num_heads: Number of attention heads.
+          注意力头的数量。
         - num_layers: Number of transformer layers.
+          Transformer层数。
         - max_length: Max possible sequence length.
+          最大可能的序列长度。
         """
         super().__init__()
 
@@ -65,13 +75,18 @@ class CaptioningTransformer(nn.Module):
         Given image features and caption tokens, return a distribution over the
         possible tokens for each timestep. Note that since the entire sequence
         of captions is provided all at once, we mask out future timesteps.
+        给定图像特征和标题标记，返回每个时间步长可能标记的分布。
+        请注意，由于整个序列的标题是一次性提供的，因此我们屏蔽了未来的时间步长。
 
         Inputs:
-         - features: image features, of shape (N, D)
-         - captions: ground truth captions, of shape (N, T)
+        - features: image features, of shape (N, D)
+          图像特征，形状为（N，D）
+        - captions: ground truth captions, of shape (N, T)
+          真实标题，形状为（N，T）
 
         Returns:
-         - scores: score for each token at each timestep, of shape (N, T, V)
+        - scores: score for each token at each timestep, of shape (N, T, V)
+          每个时间步长的每个标记的分数，形状为（N，T，V）
         """
         N, T = captions.shape
         # Create a placeholder, to be overwritten by your code below.
@@ -87,11 +102,20 @@ class CaptioningTransformer(nn.Module):
         #     this mask.                                                           #
         #  3) Finally, apply the decoder features on the text & image embeddings   #
         #     along with the tgt_mask. Project the output to scores per token      #
+        # 实现CaptionTransformer的前向函数。
+        # 一些提示：
+        # 1）您首先必须嵌入标题并添加位置编码。然后，您必须将图像特征投影到相同的维度中。
+        # 2）您必须为标题中的未来时间步骤准备一个掩码（tgt_mask）。torch.tril（）函数可能有助于准备此掩码。
+        # 3）最后，将解码器特征应用于文本和图像嵌入以及tgt_mask。将输出投影到每个令牌的分数
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        captions = self.embedding(captions)
+        captions = self.positional_encoding(captions)
+        features = self.visual_projection(features).unsqueeze(1)
 
-        pass
-
+        tgt_mask = torch.tril(torch.ones((T, T)))
+        output = self.transformer(captions, features, tgt_mask)
+        scores = self.output(output)
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
