@@ -80,7 +80,7 @@ def simclr_loss_naive(out_left, out_right, tau):
         loss_right = -torch.log(head / down_right)
         total_loss += loss_left + loss_right
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-         ##############################################################################
+        ##############################################################################
         #                               END OF YOUR CODE                             #
         ##############################################################################
 
